@@ -1,0 +1,112 @@
+﻿@page "/Quiz/{QuizId:int}"
+
+@inject Quizoo.Service.QuizService QuizService
+@inject NavigationManager NavManager
+
+<h1>Quiz</h1>
+
+@if(QuizObject == null)
+{
+    <p>Lade Quiz ...</p>
+}
+
+<div id="start-quiz" style="display:@startQuizStyle">
+    <h4>@QuizObject.Name</h4>
+    <p>@QuizObject.Description</p>
+    
+    <button @onclick="StartQuiz">Start quiz!</button>
+</div>
+
+<div id="quiz" style="display:@mainQuizStyle">
+    <h4>@(ActiveQuestionId + 1). @QuizObject.Questions[ActiveQuestionId].Name</h4>
+    <p style="font-size:12px;">@QuizObject.Questions[ActiveQuestionId].Description</p>
+    <hr />
+    @foreach (var choice in QuizObject.Questions[ActiveQuestionId].Choices)
+    {
+        <input name="@ActiveQuestionId" id="@choice.Id" type="radio" style="transform:scale(1.5);" @onclick="@(e => TickAnswer(choice))" checked="@choice.Selected" />
+        <label for="@choice.Id">@choice.Text</label>
+        <br/><br/>
+    }
+
+    <button @onclick="NextQuestion">@questionButtonLabel</button>
+</div>
+
+<div id="finish-quiz" style="display:@finishQuizStyle">
+    <h4>Successfully finished quiz</h4>
+    <p>Here are your results: <br/> Answered <b>@CorrectQuestionsCount</b> out of total <b>@QuizQuestionCount</b> questions.</p>
+
+    <button @onclick="ExitQuiz">Go to quiz overview</button>
+</div>
+
+@code {
+    private string startQuizStyle => QuizStarted ? "none" : "block";
+    private string mainQuizStyle => QuizStarted && !QuizFinished ? "block" : "none";
+    private string finishQuizStyle => QuizFinished ? "block" : "none";
+
+    private string questionButtonLabel { get; set; } = "Next question";
+
+    [Parameter]
+    public int QuizId { get; set; }
+
+    public Quizoo.Model.Quiz QuizObject { get; set; }
+    public int QuizQuestionCount { get; set; }
+    public bool QuizStarted { get; set; } = false;
+    public bool QuizFinished { get; set; } = false;
+
+    public int ActiveQuestionId { get; set; }
+    public int CorrectQuestionsCount { get; set; }
+    public Quizoo.Model.QuizChoice SelectedAnswer { get; set; }
+
+    protected override void OnInitialized()
+    {
+        QuizObject = QuizService.GetSampleQuiz();
+        QuizQuestionCount = QuizObject.Questions.Count;
+        ActiveQuestionId = 0;
+    }
+
+    public void StartQuiz()
+    {
+        QuizStarted = true;
+        //TODO: Start timer if timed quiz
+    }
+
+    public void NextQuestion()
+    {
+        CalculateResult();
+
+        if ((ActiveQuestionId + 2) == QuizQuestionCount)
+        {
+            questionButtonLabel = "Finish quiz";
+        } else if((ActiveQuestionId + 1) == QuizQuestionCount)
+        {
+            QuizFinished = true;
+
+            return;
+        }
+
+        QuizObject.Questions[ActiveQuestionId].Choices.ToList().ForEach(x => x.Selected = false);
+        ActiveQuestionId++;
+    }
+
+    public void CalculateResult()
+    {
+        if(SelectedAnswer.IsCorrectAnswer)
+        {
+            CorrectQuestionsCount++;
+        }
+
+        SelectedAnswer = null;
+    }
+
+    public void TickAnswer(Quizoo.Model.QuizChoice choice)
+    {
+        choice.Selected = true;
+        SelectedAnswer = choice;
+    }
+
+    public void ExitQuiz()
+    {
+        NavManager.NavigateTo("/", true);
+    }
+}
+

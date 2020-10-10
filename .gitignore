@@ -1,0 +1,4 @@
+#VS directories
+bin/
+obj/
+.vs/
