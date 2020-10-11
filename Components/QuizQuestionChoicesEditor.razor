@@ -1,0 +1,44 @@
+﻿@foreach (QuizChoice choice in Question.Choices)
+{
+    <div id="choice">
+        <span>Choice: @choice.Text</span>
+        <br />
+        <label>Is correct answer: </label>
+        <input type="checkbox" disabled checked="@choice.IsCorrectAnswer" />
+        <br />
+    </div>
+}
+
+<div id="new-choice">
+    <label for="choice-name">Choice name:</label>
+    <input id="choice-name" type="text" @bind="ChoiceName" />
+    <br />
+    <label for="choice-correct">Is correct answer:</label>
+    <input id="choice-correct" type="checkbox" @bind="@IsCorrect" />
+    <button @onclick="AddChoice"><span class="oi oi-plus"></span> Add</button>
+</div>
+
+@code {
+    public string ChoiceName { get; set; }
+    public bool IsCorrect { get; set; }
+
+    [Parameter]
+    public QuizQuestion Question { get; set; }
+
+    public void AddChoice()
+    {
+        Question.Choices.Add(new QuizChoice
+        {
+            Text = ChoiceName,
+            IsCorrectAnswer = IsCorrect
+        });
+
+        ClearInputs();
+    }
+
+    public void ClearInputs()
+    {
+        ChoiceName = string.Empty;
+        IsCorrect = false;
+    }
+}

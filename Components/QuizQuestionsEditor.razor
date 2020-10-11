@@ -1,0 +1,63 @@
+﻿@inject QuizService QuizService
+
+<ul>
+    @foreach (QuizQuestion question in Quiz.Questions)
+    {
+        <li>
+            <span>Name: @question.Name</span>
+            <br />
+            <span>Description: @question.Description</span>
+            <br />
+            <span>Choices:</span>
+            @foreach (QuizChoice choice in question.Choices)
+            {
+                <p>@choice.Text (is correct answer: @(choice.IsCorrectAnswer ? "Yes" : "No"))</p>
+            }
+        </li>
+    }
+</ul>
+
+<div id="new-question">
+    <label for="question-name">Question name:</label>
+    <input id="question-name" type="text" @bind="QuestionName" />
+    <br />
+    <label for="question-description">Question description:</label>
+    <input id="question-description" type="text" @bind="QuestionDescription" />
+    <br />
+    <QuizQuestionChoicesEditor @ref="ChoicesEditor" Question="CurrentEditedQuestion" />
+    <br />
+    <button @onclick="AddQuestion"><span class="oi oi-plus"></span> Add</button>
+</div>
+
+@code {
+    [Parameter]
+    public Quiz Quiz { get; set; }
+
+    public string QuestionName { get; set; }
+    public string QuestionDescription { get; set; }
+
+    public QuizQuestion CurrentEditedQuestion { get; set; } = new QuizQuestion();
+    public QuizQuestionChoicesEditor ChoicesEditor { get; set; }
+
+    public void AddQuestion()
+    {
+        CurrentEditedQuestion.Name = QuestionName;
+        CurrentEditedQuestion.Description = QuestionDescription;
+
+        QuizService.PersistQuiz(() => {
+            QuizQuestion dbo = QuizService.Database.Add(CurrentEditedQuestion);
+            Quiz.Questions.Add(dbo); 
+        });
+
+        CurrentEditedQuestion = new QuizQuestion();
+        ClearInputs();
+    }
+
+    public void ClearInputs()
+    {
+        QuestionName = string.Empty;
+        QuestionDescription = string.Empty;
+
+        ChoicesEditor.ClearInputs();
+    }
+}

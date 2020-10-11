@@ -1,4 +1,115 @@
 ﻿@page "/QuizAdmin"
 
+@inject QuizService QuizService
+@inject NavigationManager NavManager
+
+<style>
+    .group-box {
+        border-style: solid;
+        border-width: 2px;
+        padding: 10px;
+        margin: 10px;
+    }
+</style>
+
 <h1>Quiz administration</h1>
 <p>Here you can create new quizzes and modify existing ones.</p>
+
+<div class="group-box">
+    <h4>Create new quiz</h4>
+    <p>Here you can create a new multiple-choice quiz.</p>
+    <br />
+    <label for="quiz-name">Quiz name:</label>
+    <input type="text" id="quiz-name" @bind="QuizName" />
+    <br />
+    <label for="quiz-desc">Quiz description:</label>
+    <textarea style="min-width:500px;" id="quiz-desc" @bind="QuizDescription" />
+    <br />
+    <QuizQuestionsEditor Quiz="NewQuiz" />
+    <br />
+    <button @onclick="CreateNewQuiz" disabled="@(string.IsNullOrEmpty(QuizName))">Create new quiz</button>
+</div>
+
+<div class="group-box">
+    <h4>Modify quiz</h4>
+    <p>
+        <label for="quiz">Quiz:</label>
+        <select id="quiz" @onchange="QuizSelected">
+            <option value="-1">Please select a quiz</option>
+            @foreach (Model.Quiz quiz in Quizzes)
+            {
+                <option value="@quiz?.Id">@quiz?.Name</option>
+            }
+        </select>
+        <br />
+        <label for="quiz-name">Quiz name:</label>
+        <input type="text" id="quiz-name" @bind="EditQuizName" />
+        <br />
+        <label for="quiz-desc">Quiz description:</label>
+        <textarea style="min-width:500px;" id="quiz-desc" @bind="EditQuizDescription" />
+        <br />
+    </p>
+    <button @onclick="SaveChanges" disabled="@(string.IsNullOrEmpty(EditQuizName))">Save changes</button>
+    <button @onclick="DeleteQuiz" disabled="@(string.IsNullOrEmpty(EditQuizName))">Delete quiz</button>
+</div>
+
+@code {
+
+    public IList<Quizoo.Model.Quiz> Quizzes { get; set; }
+    public string SelectedQuizGuid { get; set; }
+    public Quizoo.Model.Quiz NewQuiz { get; set; } = new Quizoo.Model.Quiz();
+    public Quizoo.Model.Quiz SelectedQuiz => QuizService.GetQuiz(SelectedQuizGuid);
+
+    public string QuizName { get; set; }
+    public string QuizDescription { get; set; }
+    public string EditQuizName { get; set; }
+    public string EditQuizDescription { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Quizzes = QuizService.GetAllQuizzes();
+    }
+
+    public void QuizSelected(ChangeEventArgs e)
+    {
+        if ((string)e.Value == "-1")
+        {
+            QuizName = string.Empty;
+            QuizDescription = string.Empty;
+            return;
+        }
+
+        SelectedQuizGuid = (string)e.Value;
+
+        EditQuizName = SelectedQuiz.Name;
+        EditQuizDescription = SelectedQuiz.Description;
+    }
+
+    public void SaveChanges()
+    {
+        QuizService.PersistQuiz(() =>
+        {
+            SelectedQuiz.Name = EditQuizName;
+            SelectedQuiz.Description = EditQuizDescription;
+        });
+    }
+
+    public void DeleteQuiz()
+    {
+        QuizService.PersistQuiz(() =>
+        {
+            QuizService.Database.Remove(SelectedQuiz);
+        });
+    }
+
+    public void CreateNewQuiz()
+    {
+        NewQuiz.Name = QuizName;
+        NewQuiz.Description = QuizDescription;
+
+        QuizService.PersistQuiz(() =>
+        {
+            QuizService.Database.Add(NewQuiz, true);
+        });
+    }
+}

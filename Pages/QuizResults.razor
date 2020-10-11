@@ -1,0 +1,27 @@
+﻿@page "/QuizResults"
+
+
+@inject QuizService QuizService
+
+<h1>Quiz results</h1>
+
+<ul>
+    @foreach(var quizResult in UserQuizResults)
+    {
+        <li id="@quizResult.Id">
+            @quizResult.QuizFinishedTime: Quiz "<b>@quizResult.Quiz?.Name</b>"
+            <br/>
+            <span>Result: <b>@quizResult.CorrectAnswers / @quizResult.Quiz?.Questions.Count</b> correct answers</span>
+        </li>
+    }
+</ul>
+
+@code {
+    public IList<QuizResult> UserQuizResults { get; set; }
+
+    protected override void OnInitialized()
+    {
+        UserQuizResults = QuizService.GetQuizResults();
+    }
+}
+

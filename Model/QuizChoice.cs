@@ -1,10 +1,13 @@
-﻿namespace Quizoo.Model
+﻿using Realms;
+using System;
+
+namespace Quizoo.Model
 {
-    public class QuizChoice
+    public class QuizChoice : RealmObject
     {
-        public int Id { get; set; }
+        [PrimaryKey]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
         public string Text { get; set; }
         public bool IsCorrectAnswer { get; set; } = false;
-        public bool Selected { get; set; } = false;
     }
 }

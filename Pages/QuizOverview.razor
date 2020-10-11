@@ -1,0 +1,27 @@
+﻿@page "/Quiz"
+
+
+@inject QuizService QuizService
+
+<h1>Quiz overview</h1>
+
+<ul>
+    @foreach(var quiz in Quizzes)
+    {
+        <li id="@quiz.Id">
+            @quiz.Name (<b>@quiz.Questions.Count</b> questions) - @quiz.Description
+            <br/>
+            <a href="/Quiz/@quiz.Id">Start quiz now</a>
+        </li>
+    }
+</ul>
+
+@code {
+    public IList<Quizoo.Model.Quiz> Quizzes { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Quizzes = QuizService.GetAllQuizzes();
+    }
+}
+

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Realms;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -7,13 +8,14 @@ using System.Threading.Tasks;
 
 namespace Quizoo.Model
 {
-    public class Quiz
+    public class Quiz : RealmObject
     {
-        public int Id { get; set; }
+        [PrimaryKey]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
         public string Name { get; set; }
         public string Description { get; set; }
-        public IList<QuizQuestion> Questions { get; set; }
-        public int QuizMaxTime { get; set; } = -1;
-        public bool IsQuizTimeBased => QuizMaxTime > 0;
+        public IList<QuizQuestion> Questions { get; }
+        public int QuizMaxTimeInSeconds { get; set; } = -1;
+        public bool IsQuizTimeBased => QuizMaxTimeInSeconds > 0;
     }
 }

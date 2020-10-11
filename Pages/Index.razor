@@ -1,4 +1,8 @@
 ﻿@page "/"
-
-<h1>Hello, world!</h1>
-
+@inject QuizService qs
+<h1>Quizoo - Home</h1>
+<br/>
+<p>Welcome to <strong>Quizoo - the leading quiz manager platform!</strong></p>
+<hr/>
+<p>Look at the sidebar in order to explore the features and create new quizzes or solve existing ones.</p>
+<button @onclick="qs.PopulateRealm">Populate</button>

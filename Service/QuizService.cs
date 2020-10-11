@@ -1,113 +1,113 @@
 ﻿using Quizoo.Model;
+using Quizoo.Service.Interfaces;
+using Realms;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace Quizoo.Service
 {
-    public class QuizService
+    public class QuizService : BaseService, IQuizService
     {
-        public Quiz GetSampleQuiz()
+        public void PopulateRealm()
         {
-            return new Quiz
+            Database.Write(() =>
             {
-                Id = 1,
-                Name = "Grundwissen Teil 1",
-                Description = "Hier testen wir dein Grundwissen zu verschiedenen Themen.",
-                Questions = new List<QuizQuestion> {
-                    new QuizQuestion
-                    {
-                        Id = 1,
-                        Name = "Wie heißt der/die deutsche BundeskanzlerIn?",
-                        Description = string.Empty,
-                        Choices = new List<QuizChoice>
-                        {
-                            new QuizChoice
-                            {
-                                Id = 2,
-                                Text = "Alfred Knierim"
-                            },
-                            new QuizChoice
-                            {
-                                Id = 3,
-                                Text = "Angela Knierim"
-                            },
-                            new QuizChoice
-                            {
-                                Id = 4,
-                                Text = "Angela Merkel",
-                                IsCorrectAnswer = true
-                            },
-                            new QuizChoice
-                            {
-                                Id = 5,
-                                Text = "Catharina Jud"
-                            }
-                        }
-                    },
-                    new QuizQuestion
-                    {
-                        Id = 2,
-                        Name = "Wie heißt der beste deutsche Flughafen?",
-                        Description = string.Empty,
-                        Choices = new List<QuizChoice>
-                        {
-                            new QuizChoice
-                            {
-                                Id = 2,
-                                Text = "MUC",
-                                IsCorrectAnswer = true
-                            },
-                            new QuizChoice
-                            {
-                                Id = 3,
-                                Text = "FRA"
-                            },
-                            new QuizChoice
-                            {
-                                Id = 4,
-                                Text = "BER"
-                            },
-                            new QuizChoice
-                            {
-                                Id = 5,
-                                Text = "FMM"
-                            }
-                        }
-                    },
-                    new QuizQuestion
-                    {
-                        Id = 3,
-                        Name = "Wie heißt der beste Terminal Duty Manager?",
-                        Description = string.Empty,
-                        Choices = new List<QuizChoice>
-                        {
-                            new QuizChoice
-                            {
-                                Id = 2,
-                                Text = "AK"
-                            },
-                            new QuizChoice
-                            {
-                                Id = 3,
-                                Text = "KQ"
-                            },
-                            new QuizChoice
-                            {
-                                Id = 4,
-                                Text = "Knierim",
-                                IsCorrectAnswer = true
-                            },
-                            new QuizChoice
-                            {
-                                Id = 5,
-                                Text = "CJ"
-                            }
-                        }
-                    }
-                }
+                Database.Add(GetSampleQuiz(), true);
+                Database.Add(GetSampleQuiz(2), true);
+                Database.Add(GetSampleQuiz(3), true);
+            });
+        }
+
+        public Quiz GetSampleQuiz(int id = 1)
+        {
+            var quiz = new Quiz
+            {
+                Name = $"Basic knowledge test part {id}",
+                Description = "We will ask you different questions in order to assess your knowledge.",
+                QuizMaxTimeInSeconds = 32,
             };
+            var choice1 = new QuizChoice
+            {
+                Text = "Angela Alfred"
+            };
+            var choice2 = new QuizChoice
+            {
+                Text = "Test Fred"
+            };
+            var choice3 = new QuizChoice
+            {
+                Text = "SDSDSD",
+                IsCorrectAnswer = true
+            };
+            var choice4 = new QuizChoice
+            {
+                Text = "Test red"
+            };
+
+            var question1 = new QuizQuestion
+            {
+                Name = "Whats the name of a test person?",
+                Description = string.Empty
+            };
+            question1.Choices.Add(choice1);
+            question1.Choices.Add(choice2);
+            question1.Choices.Add(choice3);
+            question1.Choices.Add(choice4);
+
+            quiz.Questions.Add(question1);
+
+            var question2 = new QuizQuestion
+            {
+                Name = "Whats the best airport?",
+                Description = string.Empty
+            };
+            question2.Choices.Add(choice2);
+            question2.Choices.Add(choice1);
+            question2.Choices.Add(choice4);
+            question2.Choices.Add(choice3);
+
+            quiz.Questions.Add(question2);
+
+            return quiz;
+        }
+        public QuizChoice GetChoice(string guid) {
+            return Database.Find<QuizChoice>(guid);
+        }
+
+        public IList<Quiz> GetAllQuizzes()
+        {
+            return Database.All<Quiz>().ToList();
+        }
+
+        public Quiz GetQuiz(string id)
+        {
+            return Database.Find<Quiz>(id);
+        }
+
+        public IList<QuizResult> GetQuizResults()
+        {
+            return Database.All<QuizResult>().ToList();
+        }
+
+        public void PersistQuiz(Action persistAction)
+        {
+            Database.Write(persistAction);
+        }
+
+        public void WriteResults(Quiz quiz, int correctAnswers)
+        {
+            QuizResult result = new QuizResult
+            {
+                Quiz = quiz,
+                CorrectAnswers = correctAnswers,
+                QuizFinishedTime = DateTime.Now
+            };
+
+            PersistQuiz(() =>
+            {
+                Database.Add(result);
+            });
         }
     }
 }

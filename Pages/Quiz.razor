@@ -1,31 +1,36 @@
-﻿@page "/Quiz/{QuizId:int}"
+﻿@page "/Quiz/{QuizId}"
 
-@inject Quizoo.Service.QuizService QuizService
+@inject QuizService QuizService
 @inject NavigationManager NavManager
+
+<div id="select-alert" class="alert alert-danger" style="display:@(ShowValidationAlert ? "block":"none")">
+    Please select at least one option or fill out the required fields.
+</div>
 
 <h1>Quiz</h1>
 
-@if(QuizObject == null)
+@if (QuizObject == null)
 {
-    <p>Lade Quiz ...</p>
+    <p>Loading quiz...</p>
 }
 
 <div id="start-quiz" style="display:@startQuizStyle">
     <h4>@QuizObject.Name</h4>
     <p>@QuizObject.Description</p>
-    
+
     <button @onclick="StartQuiz">Start quiz!</button>
 </div>
 
 <div id="quiz" style="display:@mainQuizStyle">
+    <p id="time-left" style="color:red;display:@(QuizObject.IsQuizTimeBased ? "block":"none")"><span class="oi oi-timer"></span> @TimeLeft</p>
     <h4>@(ActiveQuestionId + 1). @QuizObject.Questions[ActiveQuestionId].Name</h4>
     <p style="font-size:12px;">@QuizObject.Questions[ActiveQuestionId].Description</p>
     <hr />
     @foreach (var choice in QuizObject.Questions[ActiveQuestionId].Choices)
     {
-        <input name="@ActiveQuestionId" id="@choice.Id" type="radio" style="transform:scale(1.5);" @onclick="@(e => TickAnswer(choice))" checked="@choice.Selected" />
+        <input name="@ActiveQuestionId" id="@choice.Id" value="@choice.Id" type="radio" style="transform:scale(1.5);" @onchange="TickAnswer" checked="@(SelectedAnswerGuid == choice.Id)" />
         <label for="@choice.Id">@choice.Text</label>
-        <br/><br/>
+        <br /><br />
     }
 
     <button @onclick="NextQuestion">@questionButtonLabel</button>
@@ -33,7 +38,7 @@
 
 <div id="finish-quiz" style="display:@finishQuizStyle">
     <h4>Successfully finished quiz</h4>
-    <p>Here are your results: <br/> Answered <b>@CorrectQuestionsCount</b> out of total <b>@QuizQuestionCount</b> questions.</p>
+    <p>Here are your results: <br /> Answered <b>@CorrectQuestionsCount</b> out of total <b>@QuizQuestionCount</b> questions.</p>
 
     <button @onclick="ExitQuiz">Go to quiz overview</button>
 </div>
@@ -46,67 +51,120 @@
     private string questionButtonLabel { get; set; } = "Next question";
 
     [Parameter]
-    public int QuizId { get; set; }
+    public string QuizId { get; set; }
 
     public Quizoo.Model.Quiz QuizObject { get; set; }
+    public TimerPlus QuizTimer { get; set; }
     public int QuizQuestionCount { get; set; }
     public bool QuizStarted { get; set; } = false;
     public bool QuizFinished { get; set; } = false;
+    public bool ShowValidationAlert { get; set; } = false;
 
     public int ActiveQuestionId { get; set; }
     public int CorrectQuestionsCount { get; set; }
-    public Quizoo.Model.QuizChoice SelectedAnswer { get; set; }
+    public string TimeLeft { get; set; }
+    public string SelectedAnswerGuid { get; set; }
+    public QuizChoice SelectedAnswer => QuizService?.GetChoice(SelectedAnswerGuid);
 
+    [System.Diagnostics.DebuggerNonUserCode]
     protected override void OnInitialized()
     {
-        QuizObject = QuizService.GetSampleQuiz();
+        QuizObject = QuizService.GetQuiz(QuizId);
+        if(QuizObject == null)
+        {
+            NavManager.NavigateTo("/Quiz", true);
+            return;
+        }
+
         QuizQuestionCount = QuizObject.Questions.Count;
         ActiveQuestionId = 0;
     }
 
     public void StartQuiz()
     {
+        if (QuizObject.IsQuizTimeBased)
+        {
+            QuizTimer = new TimerPlus();
+            QuizTimer.Interval = QuizObject.QuizMaxTimeInSeconds * 1000;
+
+            QuizTimer.Elapsed += (e, evt) =>
+            {
+                FinishQuiz();
+                Console.WriteLine(evt.SignalTime);
+            };
+
+            var labelTimer = new Timer(1000);
+            labelTimer.AutoReset = true;
+            labelTimer.Elapsed += (sender, evt) =>
+            {
+                TimeLeft = FormatTimeLeft(QuizTimer.TimeLeft);
+                InvokeAsync(() => StateHasChanged());
+            };
+
+            QuizTimer.Start();
+            labelTimer.Start();
+        }
+
         QuizStarted = true;
-        //TODO: Start timer if timed quiz
+    }
+
+    private string FormatTimeLeft(double time)
+    {
+        var timeSpan = TimeSpan.FromMilliseconds(time);
+        string seconds = timeSpan.Seconds < 10 ? $"0{timeSpan.Seconds}" : timeSpan.Seconds.ToString();
+        return $"{timeSpan.Minutes}:{seconds}";
+    }
+
+    public void FinishQuiz()
+    {
+        CalculateResult();
+        QuizService.WriteResults(QuizObject, CorrectQuestionsCount);
+
+        QuizFinished = true;
     }
 
     public void NextQuestion()
     {
-        CalculateResult();
+        if (SelectedAnswer == null)
+        {
+            ShowValidationAlert = true;
+            return;
+        }
+        else ShowValidationAlert = false;
 
         if ((ActiveQuestionId + 2) == QuizQuestionCount)
         {
             questionButtonLabel = "Finish quiz";
-        } else if((ActiveQuestionId + 1) == QuizQuestionCount)
+        }
+        else if ((ActiveQuestionId + 1) == QuizQuestionCount)
         {
-            QuizFinished = true;
+            FinishQuiz();
 
             return;
         }
 
-        QuizObject.Questions[ActiveQuestionId].Choices.ToList().ForEach(x => x.Selected = false);
+        CalculateResult();
         ActiveQuestionId++;
     }
 
     public void CalculateResult()
     {
-        if(SelectedAnswer.IsCorrectAnswer)
+        if (SelectedAnswer != null && SelectedAnswer.IsCorrectAnswer)
         {
             CorrectQuestionsCount++;
         }
 
-        SelectedAnswer = null;
+        SelectedAnswerGuid = string.Empty;
     }
 
-    public void TickAnswer(Quizoo.Model.QuizChoice choice)
+    public void TickAnswer(ChangeEventArgs e)
     {
-        choice.Selected = true;
-        SelectedAnswer = choice;
+        SelectedAnswerGuid = (string)e.Value;
     }
 
     public void ExitQuiz()
     {
-        NavManager.NavigateTo("/", true);
+        NavManager.NavigateTo("/Quiz", true);
     }
 }
 
